@@ -124,4 +124,4 @@ var Canvas = {
 	drawCircle: drawCircle
 }
 
-var BASE_COLOR = 'gray';
+var BASE_COLOR = 'white';

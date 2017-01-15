@@ -31,7 +31,7 @@ window.addEventListener('touchend', function(event){
 	}
 });
 
-var cups = getCupTriangle({x: 150, y: 200}, 20);
+var cups = getCupTriangle({x: 150, y: 125}, 20);
 drawCupTriangle(cups);
 
 function getBallVelocity(touches){
@@ -63,6 +63,7 @@ function getBallPosition(snap, vel){
 	var angledVX = Math.abs(vel.x) * Math.sin(radsX);
 	var dY = iY + (Math.abs(angledVY * t));
 	var dX = iX + (angledVX * t);
+	getPlot(snap, vel);
 	return {
 		x: dX,
 		y: dY,
@@ -87,7 +88,7 @@ function throwBall(snap, touches){
 			cup.filled = true;
 			Canvas.drawCircle({
 				x: cup.x,
-				y: 400 - cup.y,
+				y: 300 - cup.y,
 				r: cup.r
 			}, {
 				fill: 'blue'
@@ -106,7 +107,7 @@ function throwBall(snap, touches){
 			}
 		}
 	}
-	Canvas.drawLine(Line(150, 400, fX, 400 - fY, 'blue'));
+	Canvas.drawLine(Line(150, 300, fX, 300 - fY, 'blue'));
 	throwCounter++;
 	document.getElementById('throws').innerText = throwCounter;
 }
@@ -168,7 +169,7 @@ function drawCupTriangle(cups){
 	for(var i = 0; i < cups.length; i++){
 		Canvas.drawCircle({
 			x: cups[i].x,
-			y: 400 - cups[i].y,
+			y: 300 - cups[i].y,
 			r: cups[i].r
 		}, {
 			stroke: 'red'
@@ -182,11 +183,51 @@ function render(){
 		var landed = cups[k].filled || false;
 		Canvas.drawCircle({
 			x: cups[k].x,
-			y: 400 - cups[k].y,
+			y: 300 - cups[k].y,
 			r: cups[k].r
 		}, {
 			stroke: 'red',
-			fill: landed ? 'blue' : 'gray'
+			fill: landed ? 'blue' : 'white'
 		});
 	}
 }
+
+function getPlot(snap, vel){
+	var x_axis = [];
+	var y_axis = [];
+	var height = 1.0;
+	var iX = 0;
+	var iY = 0;
+	var aZ = snap.motion.accelerationIncludingGravity.z;
+	var t = Math.sqrt(Math.abs(height/aZ));
+	var radsY = (snap.orientation.beta / 360) * 2 * Math.PI;
+	var angledVY = vel.y * Math.cos(radsY);
+	var radsX = vel.radians;
+	var angledVX = Math.abs(vel.x) * Math.sin(radsX);
+	var maxT = t;
+	var interval = maxT / 10;
+	for(var it = 0; it < maxT; it+=interval){
+		var dY = iY + (Math.abs(angledVY * it));
+		var dX = iX + (angledVX * it);
+		var dZ = height - (aZ * Math.pow(it, 2));
+		x_axis.push(it);
+		y_axis.push(dZ);
+	}
+	var data2 = [
+	  {
+	    x: x_axis,
+	    y: y_axis,
+	    type: 'line'
+	  }
+	];
+	Plotly.newPlot('plot', data2);
+}
+
+var data2 = [
+	  {
+	    x: [0, 1, 2],
+	    y: [0, 1, 2],
+	    type: 'line'
+	  }
+	];
+Plotly.newPlot('plot', data2);
