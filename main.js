@@ -31,7 +31,7 @@ window.addEventListener('touchend', function(event){
 	}
 });
 
-var cups = getCupTriangle({x: 150, y: 125}, 20);
+var cups = getCupTriangle({x: 150, y: 135}, 20);
 drawCupTriangle(cups);
 
 function getBallVelocity(touches){
