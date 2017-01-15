@@ -1,85 +1,54 @@
-var outOrient = document.getElementById('outOrientation');
-var outMotion = document.getElementById('outMotion');
-var outSnapshot = document.getElementById('outSnapshot');
-
 var snapshot = {
 	orientation: false,
 	motion: false
 }
 
 window.addEventListener('deviceorientation', function(event){
-	snapshot.orientation = event;
 	//console.log(event);
-	outOrient.innerHTML = 'ORIENTATION<br>';
-	outOrient.innerHTML += 'absolute : ' + (event.absolute) + '<br>';
-	outOrient.innerHTML += 'alpha : ' + (event.alpha) + '<br>';
-	outOrient.innerHTML += 'beta : ' + (event.beta) + '<br>';
-	outOrient.innerHTML += 'gamma : ' + (event.gamma) + '<br><br>';
+	snapshot.orientation = event;
 }, true);
 
 window.addEventListener('devicemotion', function(event){
-	snapshot.motion = event;
 	//console.log(event);
-	var accel = event.accelerationIncludingGravity;
-	outMotion.innerHTML = 'ROTATION<br>';
-	outMotion.innerHTML += 'interval : ' + (event.interval) + '<br>';
-	outMotion.innerHTML += 'alpha : ' + (event.rotationRate.alpha) + '<br>';
-	outMotion.innerHTML += 'beta : ' + (event.rotationRate.beta) + '<br>';
-	outMotion.innerHTML += 'gamma : ' + (event.rotationRate.gamma) + '<br><br>';
-	outMotion.innerHTML += 'ACCELERATION<br>'
-	outMotion.innerHTML += 'x : ' + (accel.x) + '<br>';
-	outMotion.innerHTML += 'y : ' + (accel.y) + '<br>';
-	outMotion.innerHTML += 'z : ' + (accel.z) + '<br><br>';
+	snapshot.motion = event;
 }, true);
 
 var savedTouches = [false, false];
 
 window.addEventListener('touchstart', function(event){
-	console.log(event);
+	//console.log(event);
 	savedTouches[0] = event;
 });
 
 window.addEventListener('touchend', function(event){
-	console.log(event);
+	//console.log(event);
 	savedTouches[1] = event;
 	if(savedTouches[0] && savedTouches[1]){
 		throwBall(snapshot, savedTouches);
 	}
 	else{
-		console.log('zika', savedTouches);
+		console.error('Could not compute physics with only one touch event!');
 	}
-	/*//alert('touchend');
-	outSnapshot.innerHTML = 'THROW<br>';
-	outSnapshot.innerHTML += 'interval : ' + (snapshot.motion.interval) + '<br>';
-	outSnapshot.innerHTML += 'beta angle : ' + (snapshot.orientation.beta) + '<br>';
-	outSnapshot.innerHTML += 'x accel : ' + (snapshot.motion.accelerationIncludingGravity.x) + '<br>';
-	var res = calculateDistanceTraveled(snapshot);
-	outSnapshot.innerHTML += 'distance : ' + (res.distance) + '<br>';
-	outSnapshot.innerHTML += 'speed : ' + (res.speed) + '<br>';
-	outSnapshot.innerHTML += 'angle : ' + (res.angle) + '<br>';*/
 });
 
+var cups = getCupTriangle({x: 150, y: 200}, 20);
+drawCupTriangle(cups);
+
 function getBallVelocity(touches){
-	var metersPerPixel = (0.1524) / 400; // 6 inches in meters (height of Nexus 6P)
+	var scaleX = 4250;
+	var scaleY = 4250;
+	var metersPerPixel = (0.1524 / 400); // 6 inches in meters (height of Nexus 6P)
 	var dX = touches[1].changedTouches[0].pageX - touches[0].changedTouches[0].pageX;
 	var dY = -1 * (touches[1].changedTouches[0].pageY - touches[0].changedTouches[0].pageY);
 	var dT = touches[1].timeStamp - touches[0].timeStamp;
-	console.log(touches[1].timeStamp, touches[0].timeStamp);
 	var vX = metersPerPixel * (dX / dT);
 	var vY = metersPerPixel * (dY / dT);
 	var rads = Math.atan(dY / dX);
 	return {
-		x: vX,
-		y: vY,
+		x: vX * scaleX,
+		y: vY * scaleY,
 		radians: rads
 	}
-}
-
-function throwBall(snap, touches){
-	var vel = getBallVelocity(touches);
-	var pos = getBallPosition(snap, vel);
-	console.log(vel);
-	console.log(pos);
 }
 
 function getBallPosition(snap, vel){
@@ -89,9 +58,9 @@ function getBallPosition(snap, vel){
 	var aZ = snap.motion.accelerationIncludingGravity.z;
 	var t = Math.sqrt(Math.abs(height/aZ));
 	var radsY = (snap.orientation.beta / 360) * 2 * Math.PI;
-	var angledVY = vel.x * Math.cos(radsY);
+	var angledVY = vel.y * Math.cos(radsY);
 	var radsX = vel.radians;
-	var angledVX = vel.y * Math.sin(radsX);
+	var angledVX = Math.abs(vel.x) * Math.sin(radsX);
 	var dY = iY + (Math.abs(angledVY * t));
 	var dX = iX + (angledVX * t);
 	return {
@@ -99,4 +68,117 @@ function getBallPosition(snap, vel){
 		y: dY,
 		t: t
 	};
+}
+
+var throwCounter = 0;
+
+function throwBall(snap, touches){
+	var vel = getBallVelocity(touches);
+	var pos = getBallPosition(snap, vel);
+	//console.log(vel);
+	//console.log(pos);
+	var canvasX = 200;
+	var canvasY = 200;
+	var fX = 150 + (pos.x * canvasX);
+	var fY = (pos.y * canvasY);
+	for(var j = 0; j < cups.length; j++){
+		var cup = cups[j];
+		if(ballIsInCup({x: fX, y: fY}, cup)){
+			cup.filled = true;
+			Canvas.drawCircle({
+				x: cup.x,
+				y: 400 - cup.y,
+				r: cup.r
+			}, {
+				fill: 'blue'
+			});
+		}
+		else{
+			if(throwCounter > 3){
+				render();
+			}
+		}
+	}
+	Canvas.drawLine(Line(150, 400, fX, 400 - fY, 'blue'));
+	throwCounter++;
+}
+
+function ballIsInCup(ball, cup){
+	var dX = cup.x - ball.x;
+	var dY = cup.y - ball.y;
+	var dist = Math.sqrt(Math.pow(dX, 2) + Math.pow(dY, 2));
+	if(dist < cup.r){
+		return true;
+	}
+	else{
+		return false;
+	}
+}
+
+function getCupTriangle(head, radius){
+	head.r = radius;
+	return [head, {
+		x: head.x + radius,
+		y: head.y + (2 * radius),
+		r: radius
+	}, {
+		x: head.x - radius,
+		y: head.y + (2 * radius),
+		r: radius
+	}, {
+		x: head.x,
+		y: head.y + (4 * radius),
+		r: radius
+	}, {
+		x: head.x - (2 * radius),
+		y: head.y + (4 * radius),
+		r: radius
+	}, {
+		x: head.x + (2 * radius),
+		y: head.y + (4 * radius),
+		r: radius
+	}, {
+		x: head.x + radius,
+		y: head.y + (6 * radius),
+		r: radius
+	}, {
+		x: head.x - radius,
+		y: head.y + (6 * radius),
+		r: radius
+	}, {
+		x: head.x + (3 * radius),
+		y: head.y + (6 * radius),
+		r: radius
+	}, {
+		x: head.x - (3 * radius),
+		y: head.y + (6 * radius),
+		r: radius
+	}];
+}
+
+function drawCupTriangle(cups){
+	for(var i = 0; i < cups.length; i++){
+		Canvas.drawCircle({
+			x: cups[i].x,
+			y: 400 - cups[i].y,
+			r: cups[i].r
+		}, {
+			stroke: 'red'
+		});
+	}
+}
+
+function render(){
+	clearCanvas();
+	for(var k = 0; k < cups.length; k++){
+		var landed = cups[k].filled || false;
+		Canvas.drawCircle({
+			x: cups[k].x,
+			y: 400 - cups[k].y,
+			r: cups[k].r
+		}, {
+			stroke: 'red',
+			fill: landed ? 'blue' : 'gray'
+		});
+	}
 }
