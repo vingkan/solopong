@@ -92,6 +92,13 @@ function throwBall(snap, touches){
 			}, {
 				fill: 'blue'
 			});
+			var cupsHit = 0;
+			for(var q = 0; q < cups.length; q++){
+				if(cups[q].filled){
+					cupsHit++;
+				}
+			}
+			document.getElementById('cups').innerText = cupsHit;
 		}
 		else{
 			if(throwCounter > 3){
@@ -101,6 +108,7 @@ function throwBall(snap, touches){
 	}
 	Canvas.drawLine(Line(150, 400, fX, 400 - fY, 'blue'));
 	throwCounter++;
+	document.getElementById('throws').innerText = throwCounter;
 }
 
 function ballIsInCup(ball, cup){
